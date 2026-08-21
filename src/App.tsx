@@ -9,7 +9,6 @@ import {
   Play,
   RefreshCw,
   Settings as SettingsIcon,
-  SunMedium,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge, Button, Toaster } from "./components/ui";
@@ -43,9 +42,11 @@ export function App() {
     <div className="min-h-dvh text-slate-100">
       <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/85 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-500/15 ring-1 ring-amber-600/40">
-            <SunMedium className="size-5 text-amber-400" aria-hidden />
-          </span>
+          <img
+            src="/icons/icon-192.png"
+            alt="Logo GamalierSolar"
+            className="size-9 shrink-0 rounded-lg object-cover ring-1 ring-slate-700"
+          />
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold leading-tight">{state.settings.plantName}</h1>
             <p className="truncate text-xs text-slate-500">{state.settings.location}</p>
