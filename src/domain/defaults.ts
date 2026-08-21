@@ -1,11 +1,12 @@
 import type { HistoryRange, HistoryRangeUnit, PlantSettings, SpeedMultiplier } from "./types";
+import { PLANT_PROFILE, TOTAL_PLANTED_KW } from "./plant";
 
 export const DEFAULT_SETTINGS: PlantSettings = {
-  plantName: "GamalierSolar",
-  location: "Almería, España",
-  installedKwp: 250,
-  priceKwh: 0.18,
-  co2Factor: 0.32,
+  plantName: PLANT_PROFILE.plantName,
+  location: PLANT_PROFILE.country,
+  installedKwp: TOTAL_PLANTED_KW,
+  priceKwh: 120,
+  co2Factor: 0.4,
   commissioned: "2024-06-01",
 };
 

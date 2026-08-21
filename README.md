@@ -4,6 +4,22 @@ Monitorización de planta fotovoltaica como PWA: dashboard en tiempo real, histo
 
 > **Nota importante:** actualmente **no existe conexión real** con Huawei FusionSolar. El modo real está preparado mediante una interfaz/adaptador, pero mientras no haya backend ni credenciales la aplicación funciona exclusivamente con el simulador.
 
+## Planta configurada
+
+El simulador está cargado con los datos reales de la planta **VI-0-0 Greenex** (Chile):
+
+| Equipo | Serie | Potencia nominal |
+|---|---|---|
+| INV-A | ES2490037999 | 100 kW |
+| INV-B | ES2480057718 | 100 kW |
+| INV-C | ES2490034408 | 100 kW |
+| INV-D | BN2471011691 | 100 kW |
+| INV-E | ES2490037859 | 100 kW |
+
+- Gateway: SmartLogger `1024A7355270` · Medidor: `AM001024A7355270`
+- Total instalado: **500 kWp** · Moneda: **CLP** (tarifa por defecto 120 CLP/kWh)
+- Los modelos exactos de los inversores están pendientes de confirmación; el SN se muestra en Dispositivos.
+
 ## Stack
 
 - React 18 + TypeScript estricto + Vite

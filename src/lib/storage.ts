@@ -1,10 +1,6 @@
-const PREFIX = "gamaliersolar:v1:";
+const PREFIX = "gamaliersolar:v2:";
 
-const LEGACY_KEYS: Record<string, string[]> = {
-  settings: ["gamaliersolar_settings", "gs_settings"],
-  ui: ["gamaliersolar_ui"],
-  sim: ["gamaliersolar_sim"],
-};
+const LEGACY_KEYS: Record<string, string[]> = {};
 
 function readRaw(key: string): string | null {
   try {

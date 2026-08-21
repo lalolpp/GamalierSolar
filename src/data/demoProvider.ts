@@ -28,6 +28,8 @@ import {
   yearKey,
 } from "../lib/sim";
 import type { DataProvider, SimulationControls } from "./DataProvider";
+import { PLANT_PROFILE } from "../domain/plant";
+import type { PlantDevice } from "../domain/plant";
 
 export interface SavedDemoState {
   nowIso?: string;
@@ -39,15 +41,17 @@ interface InverterDef {
   id: string;
   name: string;
   model: string;
+  capacityKw: number;
 }
 
-const INVERTER_DEFS: readonly InverterDef[] = [
-  { id: "INV-01", name: "Inversor 1", model: "SUN2000-60KTL-M0" },
-  { id: "INV-02", name: "Inversor 2", model: "SUN2000-60KTL-M0" },
-  { id: "INV-03", name: "Inversor 3", model: "SUN2000-60KTL-M0" },
-  { id: "INV-04", name: "Inversor 4", model: "SUN2000-100KTL-M1" },
-  { id: "INV-05", name: "Inversor 5", model: "SUN2000-100KTL-M1" },
-];
+const INVERTER_DEFS: readonly InverterDef[] = PLANT_PROFILE.devices.map(
+  (device: PlantDevice): InverterDef => ({
+    id: device.id,
+    name: device.name,
+    model: `SN ${device.serialNumber}`,
+    capacityKw: device.capacityKw,
+  }),
+);
 
 const STRINGS_PER_INVERTER = 6;
 const CURVE_START_HOUR = 6;
@@ -134,6 +138,7 @@ export class DemoProvider implements DataProvider, SimulationControls {
   private speed = 1;
   private paused = false;
   private readonly perfByInverter = new Map<string, number>();
+  private readonly capacityByInverter = new Map<string, number>();
   private readonly deviceOverrides = new Map<string, DeviceStatus>();
   private readonly historyCache = new Map<string, HistoryRecord>();
   private alarms: Alarm[] = [];
@@ -148,6 +153,7 @@ export class DemoProvider implements DataProvider, SimulationControls {
     const rng = mulberry32(BASE_SEED);
     for (const def of INVERTER_DEFS) {
       this.perfByInverter.set(def.id, 0.94 + rng() * 0.045);
+      this.capacityByInverter.set(def.id, def.capacityKw);
     }
     this.regenerateAlarms();
   }
@@ -277,8 +283,8 @@ export class DemoProvider implements DataProvider, SimulationControls {
     return values.reduce((s, v) => s + v, 0) / values.length;
   }
 
-  private capacityPerInverter(): number {
-    return this.installedKwp() / INVERTER_DEFS.length;
+  private capacityOf(id: string): number {
+    return this.capacityByInverter.get(id) ?? this.installedKwp() / INVERTER_DEFS.length;
   }
 
   private samplePower(anchor: Date, minutes: number, installed: number, totalPerf: number): number {
@@ -322,7 +328,7 @@ export class DemoProvider implements DataProvider, SimulationControls {
       else status = nightMode ? "standby" : "online";
 
       const perf = this.perfByInverter.get(def.id) ?? 0.95;
-      const capacity = this.capacityPerInverter();
+      const capacity = this.capacityOf(def.id);
       const wx = weatherAt(now, seed);
       const powerKw =
         status === "online"

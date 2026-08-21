@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Activity, Bell, Cpu, Database, RotateCcw, Save, ServerCog, Share2, SunMedium } from "lucide-react";
+import { Activity, Bell, Cpu, Database, PlugZap, RotateCcw, Router, Save, ServerCog, Share2, SunMedium } from "lucide-react";
 import { Badge, Button, Card, Field, TextInput } from "../components/ui";
 import { QrShare } from "../components/QrShare";
 import type { PlantSettings } from "../domain/types";
+import { PLANT_PROFILE } from "../domain/plant";
 import { formatClock, formatDateTime, formatNumber } from "../lib/format";
 import { useApp } from "../store";
 
@@ -49,7 +50,7 @@ export function Settings() {
               onChange={(e) => update("installedKwp", Number(e.target.value))}
             />
           </Field>
-          <Field label="Precio energía (€/kWh)" error={errors.priceKwh}>
+          <Field label="Precio energía (CLP/kWh)" error={errors.priceKwh}>
             <TextInput
               type="number"
               min={0}
@@ -130,11 +131,17 @@ export function Settings() {
           <dl className="space-y-2.5 text-sm">
             <DiagRow icon={ServerCog} label="Proveedor activo" value={providerLabel} />
             <DiagRow
+              icon={Router}
+              label="SmartLogger"
+              value={PLANT_PROFILE.smartlogger.serialNumber}
+            />
+            <DiagRow icon={PlugZap} label="Medidor de energía" value={PLANT_PROFILE.meter.serialNumber} />
+            <DiagRow
               icon={Activity}
               label="Última actualización"
               value={state.live ? formatClock(state.live.now) : "—"}
             />
-            <DiagRow icon={Cpu} label="Inversores" value={String(state.inverters.length)} />
+            <DiagRow icon={Cpu} label="Inversores" value={`${state.inverters.length} × 100 kW`} />
             <DiagRow
               icon={Bell}
               label="Alarmas cargadas"

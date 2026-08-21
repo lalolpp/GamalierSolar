@@ -9,8 +9,12 @@ export function formatInteger(value: number): string {
   return nf(0, 0).format(Math.round(value));
 }
 
-export function formatEur(value: number): string {
-  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(value);
+export function formatMoney(value: number): string {
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
 export function formatPercent(value: number, decimals = 1): string {

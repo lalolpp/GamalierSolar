@@ -4,8 +4,8 @@ import { InverterProductionChart, PowerCurveChart } from "../components/charts";
 import { mergeCurve, useApp } from "../store";
 import {
   formatCo2,
-  formatEur,
   formatEnergy,
+  formatMoney,
   formatNumber,
   formatPercent,
   formatPower,
@@ -55,7 +55,7 @@ export function Dashboard() {
 
         <Card title="Economía y medio ambiente">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Kpi icon={Coins} label="Ingresos hoy" value={formatEur(income)} tone="success" hint={`Tarifa ${formatNumber(settings.priceKwh, 2)} €/kWh`} />
+            <Kpi icon={Coins} label="Ingresos hoy" value={formatMoney(income)} tone="success" hint={`Tarifa ${formatNumber(settings.priceKwh, 0)} CLP/kWh`} />
             <Kpi icon={Leaf} label="CO₂ evitado hoy" value={formatCo2(co2Avoided)} tone="success" />
             <Kpi icon={Sun} label="Horas pico eq." value={`${formatNumber(sunHours, 2)} h`} tone="brand" hint={`Sobre ${formatNumber(settings.installedKwp, 0)} kWp`} />
           </div>
