@@ -9,6 +9,7 @@ Monitorización de planta fotovoltaica como PWA: dashboard en tiempo real, histo
 - React 18 + TypeScript estricto + Vite
 - Tailwind CSS v4
 - Recharts + lucide-react
+- `qrcode-generator` (MIT, ~12 kB): genera el QR de "Compartir acceso"; se eligió librería en lugar de implementar el codificador a mano por fiabilidad
 - Sin dependencias extra para PWA (manifest + service worker propios)
 
 ## Arquitectura
@@ -83,6 +84,16 @@ Manifest, iconos y service worker incluidos en `public/`. Al desplegar sobre HTT
 ## Exportación CSV
 
 El historial exporta con BOM UTF-8, separador `;` y encabezados claros, compatible con Excel en español: `gamaliersolar_historial_YYYY-MM-DD.csv`.
+
+## Acceso desde móvil / Compartir por QR
+
+En **Ajustes → Compartir acceso** se genera un código QR con la URL de la aplicación:
+
+1. Ejecuta `npm run dev -- --host` (o accede ya con la IP del PC).
+2. Sustituye `localhost` en el campo de enlace por la IP local del equipo (p. ej. `http://192.168.1.50:5173`).
+3. Escanea el QR desde el móvil (misma red Wi-Fi), comparte el enlace o descarga el QR como PNG.
+
+Para acceder desde fuera de tu red, despliega la app en un hosting estático (Vercel, Netlify…) con `npm run build`.
 
 ## Pendiente para producción
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Activity, Bell, Cpu, Database, RotateCcw, Save, ServerCog, SunMedium } from "lucide-react";
+import { Activity, Bell, Cpu, Database, RotateCcw, Save, ServerCog, Share2, SunMedium } from "lucide-react";
 import { Badge, Button, Card, Field, TextInput } from "../components/ui";
+import { QrShare } from "../components/QrShare";
 import type { PlantSettings } from "../domain/types";
 import { formatClock, formatDateTime, formatNumber } from "../lib/format";
 import { useApp } from "../store";
@@ -14,6 +15,7 @@ export function Settings() {
     demoEnabled,
     appVersion,
     resetDemo,
+    pushToast,
   } = useApp();
   const [draft, setDraft] = useState<PlantSettings>(state.settings);
   const [errors, setErrors] = useState<Partial<Record<keyof PlantSettings, string>>>({});
@@ -29,6 +31,7 @@ export function Settings() {
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
+      <div className="space-y-4">
       <Card title="Datos de la planta">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Nombre de la planta" error={errors.plantName}>
@@ -78,6 +81,17 @@ export function Settings() {
           </Button>
         </div>
       </Card>
+
+      <Card
+        title="Compartir acceso"
+        subtitle="Escanea el QR desde el móvil para abrir la aplicación"
+      >
+        <QrShare onToast={pushToast} />
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
+          <Share2 className="size-3.5" aria-hidden /> El móvil debe estar en la misma red que este equipo.
+        </p>
+      </Card>
+      </div>
 
       <div className="space-y-4">
         <Card title="Origen de datos" subtitle="Configurado mediante VITE_DATA_MODE en tiempo de compilación">
