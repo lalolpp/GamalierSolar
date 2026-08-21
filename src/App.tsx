@@ -45,7 +45,7 @@ export function App() {
           <img
             src="/icons/icon-192.png"
             alt="Logo GamalierSolar"
-            className="size-9 shrink-0 rounded-lg object-cover ring-1 ring-slate-700"
+            className="size-[90px] shrink-0 rounded-xl object-cover ring-1 ring-slate-700"
           />
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold leading-tight">{state.settings.plantName}</h1>
