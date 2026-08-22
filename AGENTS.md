@@ -14,6 +14,8 @@ Reglas clave: las vistas NUNCA importan `lib/sim.ts`; sin secretos en frontend; 
 
 ## Estado actual (agosto 2026)
 
+- **PWA publicada en producción: https://gamaliersolar.web.app** (Firebase Hosting, proyecto `gamaliersolar`, cuenta edo.electric@gmail.com).
+- Para publicar cambios: `npm run build` y luego `firebase deploy --only hosting` (CLI instalada y logueada en este PC; en otro PC: `npm i -g firebase-tools && firebase login`).
 - App funcional en modo DEMO con simulador determinista (reloj virtual ×1/×60/×600, pausa).
 - Cargados datos reales de la planta en `src/domain/plant.ts`:
   - Planta **VI-0-0 Greenex** (Chile), 5 inversores de **100 kW c/u = 500 kWp**.
