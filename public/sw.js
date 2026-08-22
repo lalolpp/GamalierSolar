@@ -1,4 +1,4 @@
-const CACHE_NAME = "gamaliersolar-v1";
+const CACHE_NAME = "gamaliersolar-v2";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
