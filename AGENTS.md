@@ -12,6 +12,18 @@ UI (views/) → store.tsx → services/ → data/DataProvider → demoProvider |
 
 Reglas clave: las vistas NUNCA importan `lib/sim.ts`; sin secretos en frontend; sin `any`; TypeScript estricto debe pasar (`npm run typecheck`) junto con `npm run build` antes de cada commit.
 
+## ⭐ SEGUIR DESDE AQUÍ (nota para la próxima sesión, escrita el 22-ago-2026)
+
+**Lo último logrado:** con la sesión web del usuario se exploró el portal FusionSolar y se descubrió su API interno (documentado más abajo). Se obtuvieron DATOS REALES en vivo de la planta: potencia actual, curva del día cada 5 min, energía día/mes/año/vida, 0 alarmas activas. Los datos confirmados ya viven en `src/domain/plant.ts` (coordenadas Mostazal, puesta en marcha 2025-01-08, stationDn NE=35346190).
+
+**Pasos a seguir, en orden:**
+1. **Esperar contrato de Delta Activos** (usuario lo está consiguiendo) para decidir si pedimos cuenta Northbound formal. La plantilla de correo/WhatsApp para pedirla se redactó en chat; volver a generarla cuando toque.
+2. **Opción interina PROPUESTA pero NO aprobada:** backend que haga login web con las credenciales del usuario y consuma los endpoints internos de abajo (no oficial: puede cambiar o limitarse; no guardar esas claves sin consentimiento explícito).
+3. **Cuando haya vía elegida (NB o interina):** crear backend que guarde credenciales y exponga `/api/live`, `/api/inverters`, `/api/history`, `/api/alarms` → implementar `src/data/huaweiProvider.ts` → `.env.local` con `VITE_DATA_MODE=real` + `VITE_HUAWEI_ENDPOINT`.
+4. **Tareas técnicas pendientes del API interno:** mapear signalIds por tipo de equipo (10025 respondió; 10095 vacío); descubrir parámetros correctos de `running-status`; obtener los deviceDn de los 5 inversores y del medidor (entrando a la página de cada equipo en el portal, como se hizo con NE=35346192, o buscando un endpoint de listado).
+
+**Estado producción:** https://gamaliersolar.web.app — tras cada cambio: `npm run build` + `firebase deploy --only hosting`.
+
 ## Estado actual (agosto 2026)
 
 - **PWA publicada en producción: https://gamaliersolar.web.app** (Firebase Hosting, proyecto `gamaliersolar`, cuenta edo.electric@gmail.com).
@@ -45,9 +57,21 @@ Datos que entregará Delta/Huawei al crear la cuenta API (menú Sistema → Gest
 ## Datos pendientes de confirmar por el usuario
 
 - Modelos exactos de los inversores (¿SUN2000-100KTL?)
-- Fecha real de puesta en marcha
 - Tarifa CLP/kWh contractual
 - Nº de strings por inversor (el simulador usa 6)
+
+## API interno del portal FusionSolar (descubierto ago 2026, vía sesión web del usuario)
+
+Dominio: `https://la5.fusionsolar.huawei.com` — requiere cookie de sesión web (o backend con login). Endpoints verificados con datos reales:
+
+- `GET /rest/pvms/web/station/v3/overview/station-kpi-data?stationDn=NE%3D35346190` → KPIs: dailyEnergy, cumulativeEnergy, inverterPower, currency(19).
+- `GET .../station/v3/overview/station-detail?stationDn=...` → metadatos completos + `realtimePower` curva cada 5 min + rptNrgKpi (día/mes/año/vida: pvNrg, onGridNrg, buyNrg, selfUseNrg) + coordenadas + gridConnectedTime 2025-01-08.
+- `GET .../station/v3/overview/statistic?stationDn=...` → conteo de alarmas por severidad 1-4.
+- `GET .../station/v3/overview/energy-flow?stationDn=...&featureId=sellpower` → flujo energía.
+- `GET /rest/pvms/web/device/v1/device-real-kpi?deviceDn=NE%3D35346192&signalIds=10025` → señal INDIVIDUAL por llamada (con coma falla). signalIds válidos aún por mapear; 10025 respondió, 10095 vacío.
+- `running-status` requiere parámetros adicionales (pendiente).
+
+IDs clave: planta `stationDn=NE=35346190` (`dnId=13932521`, parentDn NE=33757771); un inversor visto con `deviceDn=NE=35346192`. Datos reales confirmados: 500 kW, conexión a red 2025-01-08, Mostazal (O'Higgins), lat -34.029986 lon -70.620429, tz America/Santiago, existMeter=true.
 
 ## Convenciones
 
