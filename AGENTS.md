@@ -27,19 +27,20 @@ Reglas clave: las vistas NUNCA importan `lib/sim.ts`; sin secretos en frontend; 
 
 ## Pendiente principal: conexión a datos REALES
 
-Falta que el usuario decida entre dos opciones y consiga los datos:
+**Roles:** *Greenex* = empresa donde está la planta fotovoltaica (propietaria del sitio/activo). *Delta Activos* = empresa externa que instaló todo (instalador/EPC) y presta el servicio de monitoreo anual pago; probablemente es el administrador del portal FusionSolar.
 
-**Opción A — API oficial Huawei FusionSolar (Northbound/OpenAPI):**
-1. Cuenta Northbound (usuario+clave de API, se solicita a Huawei/instalador citando el SmartLogger)
-2. ID de planta (station code del portal FusionSolar)
-3. URL regional del portal (ej: la5.fusionsolar.huawei.com)
+**Estrategia acordada (agosto 2026): ESPERAR.** El usuario conseguirá el contrato con Delta Activos para revisar qué cubre el pago anual de monitoreo y cómo negociar la cuenta Northbound antes de pedirla.
 
-**Opción B — SmartLogger local:** IP del equipo en la red de la planta + usuario/clave de solo lectura; requiere backend corriendo en sitio o VPN.
+Contexto técnico ya verificado:
+- IP pública del SmartLogger `186.189.73.75`: puertos 80/443/502 aceptan TCP pero NO responden datos desde internet (CGNAT/filtrado). La consola local y Modbus solo son accesibles desde la red interna de la planta.
+- Vía alternativa si Delta no coopera: registro como PROPIETARIO en FusionSolar con los SNs + documentos de propiedad, o ruta local (requiere estar en red de la planta / túnel).
 
-Implementación cuando haya credenciales:
-1. Crear backend pequeño (Node/serverless en Vercel/Netlify) que guarde las claves y exponga `/api/live`, `/api/inverters`, `/api/history`, `/api/alarms`.
-2. Implementar los métodos de `src/data/huaweiProvider.ts` llamando a ese backend.
-3. Configurar `.env.local`: `VITE_DATA_MODE=real` + `VITE_HUAWEI_ENDPOINT=<url backend>`.
+Cuando se obtenga la cuenta Northbound, implementar:
+1. Backend pequeño que guarde usuario/systemCode y exponga `/api/live`, `/api/inverters`, `/api/history`, `/api/alarms`.
+2. Implementar `src/data/huaweiProvider.ts` contra ese backend.
+3. `.env.local`: `VITE_DATA_MODE=real` + `VITE_HUAWEI_ENDPOINT=<url backend>`.
+
+Datos que entregará Delta/Huawei al crear la cuenta API (menú Sistema → Gestión de empresas → crear cuenta Northbound): usuario API, systemCode y dominio regional del portal (ej. la5.fusionsolar.huawei.com). Límite: 1 consulta/min por interfaz.
 
 ## Datos pendientes de confirmar por el usuario
 
