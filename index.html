@@ -11,6 +11,26 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>GamalierSolar</title>
+    <script>
+      (function () {
+        try {
+          fetch("/version.txt", { cache: "no-store" })
+            .then(function (r) { return r.text(); })
+            .then(function (v) {
+              var nv = String(v || "").trim();
+              if (!nv) return;
+              var prev = localStorage.getItem("gs_build_version");
+              if (prev && prev !== nv) {
+                localStorage.setItem("gs_build_version", nv);
+                location.replace("/?f=" + Date.now());
+              } else if (!prev) {
+                localStorage.setItem("gs_build_version", nv);
+              }
+            })
+            .catch(function () {});
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

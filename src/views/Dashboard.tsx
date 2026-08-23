@@ -33,8 +33,6 @@ export function Dashboard() {
 
   return (
     <div className="space-y-4">
-      <ErrorBanner message={error ?? ""} onRetry={retry} />
-
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Kpi icon={Zap} label="Potencia actual" value={formatPower(live.powerKw)} tone="brand" hint={`Pico hoy: ${formatPower(live.peakKw)}`} />
         <Kpi icon={Activity} label="Producción hoy" value={formatEnergy(live.kwhToday)} tone="success" />
