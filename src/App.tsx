@@ -64,6 +64,7 @@ export function App() {
               </>
             )}
             {demoEnabled && <SimControls compact={false} />}
+            <RefreshButton compact={false} />
             <Badge tone={demoEnabled ? "info" : "success"}>{demoEnabled ? "DEMO" : "REAL"}</Badge>
           </div>
 
@@ -99,6 +100,7 @@ export function App() {
             </span>
           )}
           {demoEnabled && <SimControls compact />}
+          <RefreshButton compact />
         </div>
       </header>
 
@@ -141,6 +143,29 @@ function SimControls({ compact }: { compact: boolean }) {
         {state.paused ? <Play className="size-4" aria-hidden /> : <Pause className="size-4" aria-hidden />}
       </button>
     </span>
+  );
+}
+
+function RefreshButton({ compact }: { compact: boolean }) {
+  const { state, refresh, refreshing } = useApp();
+  const hint = state.lastUpdated
+    ? `Actualizar ahora · última: ${formatClock(state.lastUpdated)}`
+    : "Actualizar ahora";
+  return (
+    <button
+      onClick={() => void refresh()}
+      title={hint}
+      aria-label="Actualizar datos"
+      disabled={refreshing}
+      className={`grid shrink-0 place-items-center rounded-lg text-slate-400 transition-colors hover:text-amber-400 disabled:opacity-50 ${
+        compact ? "size-7" : "size-8"
+      }`}
+    >
+      <RefreshCw
+        className={`${compact ? "size-4" : "size-[18px]"} ${refreshing ? "animate-spin" : ""}`}
+        aria-hidden
+      />
+    </button>
   );
 }
 

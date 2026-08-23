@@ -6,6 +6,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import type { ReactNode } from "react";
 import type {
@@ -186,15 +187,17 @@ interface StoreValue {
   reconnectDevice(id: string): Promise<void>;
   resetDemo(): void;
   retry(): void;
+  refresh(): Promise<void>;
+  refreshing: boolean;
   dismissToast(id: number): void;
   pushToast(message: string, tone?: Toast["tone"]): void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-const REFRESH_MS = 1000;
-const INVERTER_EVERY = 3;
-const ALARM_EVERY = 5;
+const SIM_TICK_MS = 1000;
+const DATA_REFRESH_MS = 60_000;
+const DATA_REFRESH_FAST_MS = 3_000;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -202,10 +205,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const controls: SimulationControls | null = useMemo(() => asSimulationControls(provider), [provider]);
   const providerStatus = useMemo(() => getProviderStatus(), []);
   const demoEnabled = useMemo(() => isDemoActive(), []);
-  const providerRef = useRef(provider);
-  providerRef.current = provider;
 
-  const tickCount = useRef(0);
   const lastTs = useRef<number>(Date.now());
   const rangeRef = useRef<HistoryRange>(rangeForUnit("day", new Date()));
 
@@ -250,41 +250,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [provider, loadAll, loadHistory]);
 
   useEffect(() => {
+    if (!controls) return undefined;
     const interval = window.setInterval(() => {
       const now = Date.now();
       const elapsed = now - lastTs.current;
       lastTs.current = now;
-      tickCount.current += 1;
-
-      controls?.tick(elapsed);
-      const p = providerRef.current;
-
+      controls.tick(elapsed);
       void telemetryService
         .getLive()
         .then((live) => {
           dispatch({ type: "live", live });
           dispatch({ type: "updatedAt", at: new Date(live.now) });
-          if (tickCount.current % INVERTER_EVERY === 0) {
-            return p.getPowerCurve().then((c) => dispatch({ type: "live", live, curveToday: c.today }));
-          }
-          return undefined;
         })
-        .then(() => {
-          if (tickCount.current % ALARM_EVERY === 0) {
-            return alarmsService.list().then((a) => dispatch({ type: "alarms", alarms: a }));
-          }
-          return undefined;
-        })
-        .catch(() => dispatch({ type: "error", message: "Error al obtener datos" }));
-
-      if (tickCount.current % INVERTER_EVERY === 0) {
-        p.getInverters()
-          .then((inv) => dispatch({ type: "inverters", inverters: inv }))
-          .catch(() => undefined);
-      }
-    }, REFRESH_MS);
+        .catch(() => undefined);
+    }, SIM_TICK_MS);
     return () => window.clearInterval(interval);
   }, [controls]);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
+
+  const refresh = useCallback(async () => {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
+    try {
+      await loadAll();
+      await loadHistory(rangeRef.current);
+    } finally {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
+  }, [loadAll, loadHistory]);
+
+  useEffect(() => {
+    const ms = demoEnabled && state.speed > 1 ? DATA_REFRESH_FAST_MS : DATA_REFRESH_MS;
+    const interval = window.setInterval(() => {
+      void refresh();
+    }, ms);
+    return () => window.clearInterval(interval);
+  }, [demoEnabled, state.speed, refresh]);
 
   useEffect(() => {
     writeStorage<PlantSettings>("settings", state.settings);
@@ -398,6 +403,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       reconnectDevice,
       resetDemo,
       retry,
+      refresh,
+      refreshing,
       dismissToast: (id: number) => dispatch({ type: "toastRemove", id }),
       pushToast,
     }),
@@ -415,6 +422,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       reconnectDevice,
       resetDemo,
       retry,
+      refresh,
+      refreshing,
       pushToast,
     ],
   );
