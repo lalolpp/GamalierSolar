@@ -1,3 +1,4 @@
+import { PLANT_PROFILE } from "../domain/plant";
 import type {
   Alarm,
   HistoryRange,
@@ -12,9 +13,36 @@ export interface HuaweiProviderConfig {
   endpoint: string;
 }
 
+interface SnapshotResponse {
+  now: string;
+  status: "online" | "offline";
+  powerKw: number;
+  peakKw: number;
+  kwhToday: number;
+  kwhMonth: number;
+  kwhYear: number;
+  kwhTotal: number;
+  curve: { time: string; powerKw: number }[];
+}
+
+interface InvertersResponse {
+  inverters: { dn: string; powerKw: number; statusCode: number | null }[];
+}
+
+async function getJson<T>(base: string, path: string): Promise<T> {
+  const res = await fetch(`${base.replace(/\/$/, "")}${path}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || `Backend HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 export class HuaweiProvider implements DataProvider {
   readonly id = "huawei";
-  readonly label = "Huawei FusionSolar (vía backend)";
+  readonly label = "Huawei FusionSolar (datos reales)";
 
   constructor(private readonly config?: HuaweiProviderConfig) {}
 
@@ -22,46 +50,77 @@ export class HuaweiProvider implements DataProvider {
     return Boolean(this.config?.endpoint);
   }
 
-  private ensureReady(): void {
-    if (!this.isConfigured()) {
-      throw new Error("Proveedor real no configurado");
+  private base(): string {
+    if (!this.config?.endpoint) throw new Error("Proveedor real no configurado");
+    return this.config.endpoint;
+  }
+
+  private async snapshot(): Promise<SnapshotResponse> {
+    return getJson<SnapshotResponse>(this.base(), "/api/snapshot");
+  }
+
+  async getLiveTelemetry(): Promise<LiveTelemetry> {
+    const s = await this.snapshot();
+    const total = PLANT_PROFILE.devices.length;
+    return {
+      now: new Date(s.now),
+      powerKw: s.powerKw,
+      kwhToday: s.kwhToday,
+      irradiance: 0,
+      moduleTemp: 0,
+      ambientTemp: 0,
+      pr: 0,
+      peakKw: Math.max(s.peakKw, s.powerKw),
+      inverterCount: total,
+      onlineInverters: s.status === "online" ? total : 0,
+    };
+  }
+
+  async getPowerCurve(): Promise<PowerCurve> {
+    const s = await this.snapshot();
+    const today = s.curve.map((p) => ({ time: p.time, powerKw: p.powerKw }));
+    const last = today.at(-1);
+    if (last && s.powerKw > last.powerKw) today.push({ time: s.now, powerKw: s.powerKw });
+    return { today, yesterday: [] };
+  }
+
+  async getInverters(): Promise<Inverter[]> {
+    try {
+      const r = await getJson<InvertersResponse>(this.base(), "/api/inverters");
+      if (!r.inverters.length) return [];
+      return PLANT_PROFILE.devices.map((dev, i) => {
+        const raw = r.inverters[i];
+        const online = Boolean(raw && raw.statusCode === 1);
+        return {
+          id: dev.id,
+          name: dev.name,
+          model: dev.serialNumber,
+          status: online ? "online" : "offline",
+          powerKw: raw ? raw.powerKw : 0,
+          efficiency: 0,
+          temperature: 0,
+          strings: [],
+          lastSeen: undefined,
+        } satisfies Inverter;
+      });
+    } catch {
+      return [];
     }
   }
 
-  private request<T>(): Promise<T> {
-    this.ensureReady();
-    return Promise.reject(new Error("Proveedor real no configurado"));
+  async getHistory(range: HistoryRange): Promise<HistoryRecord[]> {
+    const r = await getJson<{ records: HistoryRecord[] }>(
+      this.base(),
+      `/api/history?unit=${encodeURIComponent(range.unit)}`,
+    );
+    return r.records;
   }
 
-  getLiveTelemetry(): Promise<LiveTelemetry> {
-    return this.request<LiveTelemetry>();
+  async getAlarms(): Promise<Alarm[]> {
+    return [];
   }
 
-  getInverters(): Promise<Inverter[]> {
-    return this.request<Inverter[]>();
-  }
-
-  getHistory(_range: HistoryRange): Promise<HistoryRecord[]> {
-    return this.request<HistoryRecord[]>();
-  }
-
-  getPowerCurve(): Promise<PowerCurve> {
-    return this.request<PowerCurve>();
-  }
-
-  getAlarms(): Promise<Alarm[]> {
-    return this.request<Alarm[]>();
-  }
-
-  async acknowledgeAlarm(_id: string): Promise<void> {
-    this.ensureReady();
-  }
-
-  async acknowledgeAllAlarms(): Promise<void> {
-    this.ensureReady();
-  }
-
-  async reconnectDevice(_id: string): Promise<void> {
-    this.ensureReady();
-  }
+  async acknowledgeAlarm(): Promise<void> {}
+  async acknowledgeAllAlarms(): Promise<void> {}
+  async reconnectDevice(): Promise<void> {}
 }
