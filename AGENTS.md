@@ -12,15 +12,23 @@ UI (views/) → store.tsx → services/ → data/DataProvider → demoProvider |
 
 Reglas clave: las vistas NUNCA importan `lib/sim.ts`; sin secretos en frontend; sin `any`; TypeScript estricto debe pasar (`npm run typecheck`) junto con `npm run build` antes de cada commit.
 
-## ⭐ SEGUIR DESDE AQUÍ (nota para la próxima sesión, escrita el 22-ago-2026)
+## ⭐ SEGUIR DESDE AQUÍ (nota para la próxima sesión, escrita el 23-ago-2026)
 
-**Lo último logrado:** con la sesión web del usuario se exploró el portal FusionSolar y se descubrió su API interno (documentado más abajo). Se obtuvieron DATOS REALES en vivo de la planta: potencia actual, curva del día cada 5 min, energía día/mes/año/vida, 0 alarmas activas. Los datos confirmados ya viven en `src/domain/plant.ts` (coordenadas Mostazal, puesta en marcha 2025-01-08, stationDn NE=35346190).
+**Lo último logrado — DATOS REALES funcionando end-to-end en local:**
+- **Login SSO automatizado** contra `la5.fusionsolar.huawei.com`, sin cookies manuales: `validate-user` → `on-sso-credential-ready?ticket` (NO seguir redirect a console.digipowercloud, dominio muerto) → `login/v1/redirecturl` → `cloud.html` (extraer zone-id/instance-id de la URL) → `privilege/er/v2/session`. Sesión TTL 20 min con re-login automático.
+- **Paths correctos: `station/v1`** (el v3 de abajo está OBSOLETO: `station-kpi-data` v3 da 404). Todo sale de `station-detail` v1: currentPower, daily/month/year/cumulativeEnergy, realtimePower (curva), rptNrgKpi (desglose día pv/selfUse/onGrid/buy), co2, dirección.
+- **Inventario completo descubierto** vía `device-list` (ver IDs más abajo).
+- **Backend dual con CONTRATO ÚNICO**: `GET /api/snapshot`, `/api/inverters`, `/api/history?unit=day|month|year`:
+  - `backend/api/*` = Vercel serverless (producción). Login automático integrado.
+  - `server/index.mjs` = Node standalone para desarrollo local (puerto 8787; credenciales SOLO en `server/.env`, gitignored).
+- `huaweiProvider.ts` consume ese contrato; cuenta inversores online reales; `.env.local` local ya apunta a localhost:8787.
+- Probado: snapshot (1807 kWh hoy, desglose OK), inverters (5 conectados), history. De noche la potencia es 0/"Standby : no sunlight" y la curva viene vacía.
 
 **Pasos a seguir, en orden:**
-1. **Esperar contrato de Delta Activos** (usuario lo está consiguiendo) para decidir si pedimos cuenta Northbound formal. La plantilla de correo/WhatsApp para pedirla se redactó en chat; volver a generarla cuando toque.
-2. **Opción interina PROPUESTA pero NO aprobada:** backend que haga login web con las credenciales del usuario y consuma los endpoints internos de abajo (no oficial: puede cambiar o limitarse; no guardar esas claves sin consentimiento explícito).
-3. **Cuando haya vía elegida (NB o interina):** crear backend que guarde credenciales y exponga `/api/live`, `/api/inverters`, `/api/history`, `/api/alarms` → implementar `src/data/huaweiProvider.ts` → `.env.local` con `VITE_DATA_MODE=real` + `VITE_HUAWEI_ENDPOINT`.
-4. **Tareas técnicas pendientes del API interno:** mapear signalIds por tipo de equipo (10025 respondió; 10095 vacío); descubrir parámetros correctos de `running-status`; obtener los deviceDn de los 5 inversores y del medidor (entrando a la página de cada equipo en el portal, como se hizo con NE=35346192, o buscando un endpoint de listado).
+1. **Desplegar backend a Vercel** y configurar env vars `FS_USER`, `FS_PASS` (+ opcionales `FS_DOMAIN`, `FS_STATION_DN`). Verificar `/api/snapshot` en producción.
+2. **Compilar PWA apuntando a la URL de Vercel** (`VITE_HUAWEI_ENDPOINT=https://<proyecto>.vercel.app`) y `firebase deploy --only hosting`. OJO: el endpoint se hornea en el build.
+3. Cuando Delta Activos dé acceso: migrar a Northbound oficial (mismo contrato de backend, cambia el `_huawei.js`).
+4. Técnicas pendientes: señales del medidor (compra/venta/red, deviceDn NE=36418914); endpoint de alarmas; histórico multi-día (endpoints de reportes); mapear SN real por inversor para nombres INV-A..E exactos.
 
 **Estado producción:** https://gamaliersolar.web.app — tras cada cambio: `npm run build` + `firebase deploy --only hosting`.
 
@@ -60,16 +68,16 @@ Datos que entregará Delta/Huawei al crear la cuenta API (menú Sistema → Gest
 - Tarifa CLP/kWh contractual
 - Nº de strings por inversor (el simulador usa 6)
 
-## API interno del portal FusionSolar (descubierto ago 2026, vía sesión web del usuario)
+## API interno del portal FusionSolar (descubierto ago 2026; corregido 23-ago-2026)
 
-Dominio: `https://la5.fusionsolar.huawei.com` — requiere cookie de sesión web (o backend con login). Endpoints verificados con datos reales:
+Dominio: `https://la5.fusionsolar.huawei.com` — el backend hace login SSO automático (ver sección ⭐). Endpoints VERIFICADOS funcionando:
 
-- `GET /rest/pvms/web/station/v3/overview/station-kpi-data?stationDn=NE%3D35346190` → KPIs: dailyEnergy, cumulativeEnergy, inverterPower, currency(19).
-- `GET .../station/v3/overview/station-detail?stationDn=...` → metadatos completos + `realtimePower` curva cada 5 min + rptNrgKpi (día/mes/año/vida: pvNrg, onGridNrg, buyNrg, selfUseNrg) + coordenadas + gridConnectedTime 2025-01-08.
-- `GET .../station/v3/overview/statistic?stationDn=...` → conteo de alarmas por severidad 1-4.
-- `GET .../station/v3/overview/energy-flow?stationDn=...&featureId=sellpower` → flujo energía.
-- `GET /rest/pvms/web/device/v1/device-real-kpi?deviceDn=NE%3D35346192&signalIds=10025` → señal INDIVIDUAL por llamada (con coma falla). signalIds válidos aún por mapear; 10025 respondió, 10095 vacío.
-- `running-status` requiere parámetros adicionales (pendiente).
+- `GET /rest/pvms/web/station/v1/overview/station-detail?stationDn=NE%3D35346190` → TODO en uno: currentPower, dailyEnergy, monthEnergy, yearEnergy, cumulativeEnergy (1.19 GWh), inverterPower(500), realtimePower (curva), rptNrgKpi (día/mes/año/vida: pvNrg, onGridNrg, buyNrg, selfUseNrg), co2, dirección, coordenadas, gridConnectedTime.
+- `GET /rest/pvms/web/device/v1/device-real-kpi?deviceDn=<dn>&signalIds=10025` → señal INDIVIDUAL por llamada (con coma falla). 10025 = potencia activa kW. De noche devuelve string "Standby : no sunlight".
+- `GET /rest/neteco/web/config/device/v1/device-list?conditionParams.parentDn=NE%3D35346190&conditionParams.curPage=0&conditionParams.recordperpage=300` → inventario completo (dn, dnId, mocTypeName Inverter/SmartLogger/Power Sensor).
+- `POST /rest/dp/uidm/unisso/v1/validate-user?service=...` con header `app-id: smartpvms` → login paso 1.
+
+OBSOLETOS (dan 404 con sesión válida, NO usar): `/station/v3/overview/*` (kpi-data, station-detail, statistic, energy-flow). El flujo de login y headers zone-id/app-id/instance-id están implementados en `backend/api/_huawei.js`.
 
 IDs clave: planta `stationDn=NE=35346190` (`dnId=13932521`, parentDn NE=33757771). Inventario COMPLETO descubierto via `GET /rest/neteco/web/config/device/v1/device-list?conditionParams.parentDn=NE%3D35346190&conditionParams.curPage=0&conditionParams.recordperpage=300` (funciona con sesión web):
 - **Inversores ×5**: NE=35346194 (dnId 13932524), NE=35346195 (13932525), NE=35346196 (13932526), NE=35346198 (13932528), NE=35435360 (14970714).
