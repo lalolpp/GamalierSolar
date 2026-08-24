@@ -1,8 +1,18 @@
-const { STATION_DN, portalGet, cors, httpError, num } = require("./_huawei");
+const { STATION_DN, portalGet, cors, httpError, num, enc } = require("./_huawei");
 
-function hourElapsedUtcChile(now) {
+function hourElapsedSantiago(now) {
   const santiago = new Date(now.getTime() - 4 * 60 * 60 * 1000);
   return Math.max(1, santiago.getUTCHours() + santiago.getUTCMinutes() / 60);
+}
+
+function parseCurvePowers(rp) {
+  if (Array.isArray(rp)) {
+    return rp.map((p) => num(typeof p === "object" ? (p.value ?? p.y ?? p.powerKw) : p));
+  }
+  if (rp && typeof rp === "object") {
+    return Object.values(rp).map((v) => num(v));
+  }
+  return [];
 }
 
 module.exports = async (req, res) => {
@@ -11,15 +21,9 @@ module.exports = async (req, res) => {
   if (req.method !== "GET") return res.status(405).json({ error: "Metodo no permitido" });
   const unit = String(req.query.unit || "day");
   try {
-    const enc = encodeURIComponent(STATION_DN);
-    const [kpi, detail] = await Promise.all([
-      portalGet(`/rest/pvms/web/station/v1/overview/station-kpi-data?stationDn=${enc}`),
-      portalGet(`/rest/pvms/web/station/v1/overview/station-detail?stationDn=${enc}`),
-    ]);
-    const k = kpi.kpiData || {};
+    const detail = await portalGet(`/rest/pvms/web/station/v1/overview/station-detail?stationDn=${enc(STATION_DN)}`);
     const d = detail.data || {};
-    const rp = d.realtimePower || {};
-    const powers = Object.values(rp).map((v) => num(v));
+    const powers = parseCurvePowers(d.realtimePower);
     const peakKw = powers.length ? Math.max(...powers) : 0;
     let record;
     if (unit === "month") {
@@ -33,11 +37,11 @@ module.exports = async (req, res) => {
       record = { date: y, energyKwh: energy, averageKw: Number((energy / 24 / 365).toFixed(2)), peakKw: 0, pr: 0 };
     } else {
       const todayIso = new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10);
-      const energy = num(k.dailyEnergy ?? d.dailyEnergy);
+      const energy = num(d.dailyEnergy);
       record = {
         date: todayIso,
         energyKwh: energy,
-        averageKw: Number((energy / hourElapsedUtcChile(new Date())).toFixed(2)),
+        averageKw: Number((energy / hourElapsedSantiago(new Date())).toFixed(2)),
         peakKw,
         pr: 0,
       };

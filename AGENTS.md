@@ -71,7 +71,13 @@ Dominio: `https://la5.fusionsolar.huawei.com` — requiere cookie de sesión web
 - `GET /rest/pvms/web/device/v1/device-real-kpi?deviceDn=NE%3D35346192&signalIds=10025` → señal INDIVIDUAL por llamada (con coma falla). signalIds válidos aún por mapear; 10025 respondió, 10095 vacío.
 - `running-status` requiere parámetros adicionales (pendiente).
 
-IDs clave: planta `stationDn=NE=35346190` (`dnId=13932521`, parentDn NE=33757771); un inversor visto con `deviceDn=NE=35346192`. Datos reales confirmados: 500 kW, conexión a red 2025-01-08, Mostazal (O'Higgins), lat -34.029986 lon -70.620429, tz America/Santiago, existMeter=true.
+IDs clave: planta `stationDn=NE=35346190` (`dnId=13932521`, parentDn NE=33757771). Inventario COMPLETO descubierto via `GET /rest/neteco/web/config/device/v1/device-list?conditionParams.parentDn=NE%3D35346190&conditionParams.curPage=0&conditionParams.recordperpage=300` (funciona con sesión web):
+- **Inversores ×5**: NE=35346194 (dnId 13932524), NE=35346195 (13932525), NE=35346196 (13932526), NE=35346198 (13932528), NE=35435360 (14970714).
+- **SmartLogger**: NE=35346192 (dnId 13932522) — ojo: NO es un inversor.
+- **Medidor (Power Sensor)**: NE=36418914 (dnId 19698200).
+- Nota nocturna: `device-real-kpi` señal 10025 devuelve `"Standby :  no sunlight"` (string → null) cuando no hay sol; `status:1` sigue en 1.
+
+Datos reales confirmados: 500 kW, conexión a red 2025-01-08, Mostazal (O'Higgins), lat -34.029986 lon -70.620429, tz America/Santiago, existMeter=true.
 
 ## Convenciones
 

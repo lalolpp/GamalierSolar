@@ -26,7 +26,7 @@ interface SnapshotResponse {
 }
 
 interface InvertersResponse {
-  inverters: { dn: string; powerKw: number; statusCode: number | null }[];
+  inverters: { dn: string; name?: string; powerKw: number; statusCode: number | null }[];
 }
 
 async function getJson<T>(base: string, path: string): Promise<T> {
@@ -60,8 +60,12 @@ export class HuaweiProvider implements DataProvider {
   }
 
   async getLiveTelemetry(): Promise<LiveTelemetry> {
-    const s = await this.snapshot();
+    const [s, inv] = await Promise.all([
+      this.snapshot(),
+      getJson<InvertersResponse>(this.base(), "/api/inverters").catch(() => null),
+    ]);
     const total = PLANT_PROFILE.devices.length;
+    const online = inv ? inv.inverters.filter((i) => i.statusCode === 1).length : 0;
     return {
       now: new Date(s.now),
       powerKw: s.powerKw,
@@ -72,7 +76,7 @@ export class HuaweiProvider implements DataProvider {
       pr: 0,
       peakKw: Math.max(s.peakKw, s.powerKw),
       inverterCount: total,
-      onlineInverters: s.status === "online" ? total : 0,
+      onlineInverters: Math.max(online, s.status === "online" ? 1 : 0),
     };
   }
 
@@ -94,7 +98,7 @@ export class HuaweiProvider implements DataProvider {
         return {
           id: dev.id,
           name: dev.name,
-          model: dev.serialNumber,
+          model: raw?.name ?? dev.serialNumber,
           status: online ? "online" : "offline",
           powerKw: raw ? raw.powerKw : 0,
           efficiency: 0,
