@@ -91,12 +91,20 @@ function initialPaused(): boolean {
   return Boolean(readStorage<SavedSimState>("sim", {}).paused);
 }
 
+interface LastGoodState {
+  live: LiveTelemetry;
+  inverters: Inverter[];
+  curveToday: TelemetryPoint[];
+}
+
+const lastGood = readStorage<LastGoodState | null>("lastgood", null);
+
 const initialState: AppState = {
   settings: readStorage<PlantSettings>("settings", DEFAULT_SETTINGS),
-  live: null,
-  curveToday: [],
+  live: lastGood?.live ?? null,
+  curveToday: lastGood?.curveToday ?? [],
   curveYesterday: [],
-  inverters: [],
+  inverters: lastGood?.inverters ?? [],
   alarms: [],
   history: [],
   historyLoading: true,
@@ -224,6 +232,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         alarmsService.list(),
       ]);
       dispatch({ type: "loaded", live, inverters, curveToday: curve.today, curveYesterday: curve.yesterday });
+      writeStorage("lastgood", { live, inverters, curveToday: curve.today });
       dispatch({ type: "alarms", alarms });
       dispatch({ type: "updatedAt", at: new Date(live.now) });
       dispatch({ type: "error", message: null });
